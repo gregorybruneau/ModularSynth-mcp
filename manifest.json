@@ -1,0 +1,127 @@
+{
+  "manifest_version": "0.2",
+  "name": "modularsynth",
+  "display_name": "ModularSynth",
+  "version": "1.2.0",
+  "description": "Build and play patches in ModularSynth, the free modular synthesizer in your browser.",
+  "long_description": "Lets Claude add modules, patch cables, turn knobs, write sequences and play notes in the ModularSynth tab open in your browser. Open https://modularsynth.app, click “AI” in the top bar and check “Connect this tab to the server”. Everything stays on your computer: the extension only talks to that tab over 127.0.0.1.",
+  "author": {
+    "name": "Gregory Bruneau",
+    "email": "gregory.bruneau@gmail.com",
+    "url": "https://github.com/gregorybruneau"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gregorybruneau/ModularSynth-mcp"
+  },
+  "support": "https://github.com/gregorybruneau/ModularSynth-mcp/issues",
+  "homepage": "https://modularsynth.app/",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server.js"
+      ],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "describe_patch",
+      "description": "Describe the current patch in the ModularSynth rack: modules (id, type, settings), cables (\"moduleId:port\" → \"moduleId:port\"), polyphony and whether the clock is running. Call it first."
+    },
+    {
+      "name": "list_module_types",
+      "description": "List the module types you can add, with their inputs, outputs and settings (name, min, max, default, unit). Pass a type to get just that one. Audio and control signals are voltages: pitch is 1 V per octave (0 V = C4), gates are 0/10 V. Real instruments and voices (saxophone, vocals…) can’t be synthesized convincingly: use a sampler (ask the user to drop a recording on it, then play it from a sequencer or MIDI→CV) or audioin (the user’s microphone or line input)."
+    },
+    {
+      "name": "list_presets",
+      "description": "List the ready-made presets (name and what they do). Load one with load_preset to start from a working sound."
+    },
+    {
+      "name": "load_preset",
+      "description": "Replace the rack with a ready-made preset, by name (see list_presets). The user can undo it."
+    },
+    {
+      "name": "new_patch",
+      "description": "Replace the rack with the default starter patch (keyboard → oscillator → filter → amplifier → output). The user can undo it."
+    },
+    {
+      "name": "add_module",
+      "description": "Add a module to the rack. Optional row and x (in HP) place it; otherwise it goes to the first free spot. Optional params set its knobs. Returns its id. For a real instrument or a voice, add a sampler and ask the user to drop a recording on it, or audioin for a microphone."
+    },
+    {
+      "name": "remove_module",
+      "description": "Remove a module and its cables from the rack."
+    },
+    {
+      "name": "connect",
+      "description": "Patch a cable from an output to an input, both written \"moduleId:port\". An input takes one cable: plugging into a busy input replaces its cable."
+    },
+    {
+      "name": "disconnect",
+      "description": "Unplug the cable going into an input (\"moduleId:port\")."
+    },
+    {
+      "name": "set_param",
+      "description": "Turn a knob or flip a switch on a module. The value is clamped to the setting range; the value actually set is returned."
+    },
+    {
+      "name": "set_notes",
+      "description": "Write the notes of one page (A–D, default A) of a Note Grid sequencer; the other pages are kept. Each note: start step (0–63: sixteenth notes when clocked by Clock ×4, thirty-second notes when the Note Grid \"resolution\" setting is 1), length in steps, MIDI pitch (60 = C4), optional velocity. Replaces the notes of that page. Only the page selected by the \"page\" setting plays: put a verse on A and a chorus on B, then save scenes with different \"page\" values."
+    },
+    {
+      "name": "play_notes",
+      "description": "Play notes live, as if on the keyboard (the patch must have a MIDI→CV module wired to sound). Each note: MIDI pitch (60 = C4), start and duration in seconds from now, optional velocity. Up to 64 notes within 30 seconds."
+    },
+    {
+      "name": "save_scene",
+      "description": "Save the current settings and sequences of every module as a scene (like a snapshot: intro, verse, chorus, break…), or overwrite an existing scene. Up to 16 scenes. Tempo and the clock's run state are not part of scenes. Returns the scene id."
+    },
+    {
+      "name": "recall_scene",
+      "description": "Switch to a saved scene, like pressing its button: on the next bar while the sound plays, right away otherwise. Stops the song if it was playing."
+    },
+    {
+      "name": "set_song",
+      "description": "Write the song: scenes played one after another, each for a number of bars (e.g. intro 4, verse 8, chorus 8, break 4, chorus 8). Up to 64 lines; an empty list removes the song. \"loop\": start again at the end (default true; otherwise the clocks stop). Needs a Clock in the patch to count bars."
+    },
+    {
+      "name": "play_song",
+      "description": "Play the song from its first line (or from line \"from\", counted from 0): the scene of each line plays for its bars, clocks restart on the first beat. Stop it with set_transport running: false."
+    },
+    {
+      "name": "highlight",
+      "description": "Show the user a module, a knob or a jack by making it glow in the rack for a few seconds (the rack scrolls to it). target: \"moduleId\", \"moduleId:setting\" or \"moduleId:port\". With \"to\" (an input \"moduleId:port\") and an output as target, it draws the cable to plug as a dotted line. Use it when you explain or ask the user to turn or patch something."
+    },
+    {
+      "name": "set_transport",
+      "description": "Start or stop every Clock in the patch (the ▶/■ button): sequencers play while it runs. Stopping also stops a playing song."
+    },
+    {
+      "name": "undo",
+      "description": "Undo the last change (yours or the user’s), like Ctrl+Z: first cancels a scene waiting for the next bar, stops a playing song."
+    }
+  ],
+  "keywords": [
+    "synthesizer",
+    "modular",
+    "music",
+    "audio",
+    "sound design"
+  ],
+  "license": "MIT",
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=20.0.0"
+    }
+  }
+}

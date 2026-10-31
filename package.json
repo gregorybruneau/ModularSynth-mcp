@@ -1,0 +1,43 @@
+{
+  "name": "modularsynth-mcp",
+  "version": "1.2.0",
+  "description": "MCP server that lets your AI (Claude Desktop, Claude Code…) build and play patches in ModularSynth, the free modular synthesizer in your browser.",
+  "type": "module",
+  "bin": {
+    "modularsynth-mcp": "server.js"
+  },
+  "files": [
+    "server.js",
+    "tools.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "homepage": "https://modularsynth.app/",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "ws": "^8.22.0"
+  },
+  "author": "Gregory Bruneau (https://github.com/gregorybruneau)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gregorybruneau/ModularSynth-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gregorybruneau/ModularSynth-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "claude",
+    "synthesizer",
+    "modular",
+    "music"
+  ]
+}

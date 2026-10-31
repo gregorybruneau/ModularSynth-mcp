@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "modularsynth",
   "display_name": "ModularSynth",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Build and play patches in ModularSynth, the free modular synthesizer in your browser.",
   "long_description": "Lets Claude add modules, patch cables, turn knobs, write sequences and play notes in the ModularSynth tab open in your browser. Open https://modularsynth.app, click “AI” in the top bar and check “Connect this tab to the server”. Everything stays on your computer: the extension only talks to that tab over 127.0.0.1.",
   "author": {
@@ -35,7 +35,7 @@
     },
     {
       "name": "list_module_types",
-      "description": "List the module types you can add, with their inputs, outputs and settings (name, min, max, default, unit). Pass a type to get just that one. Audio and control signals are voltages: pitch is 1 V per octave (0 V = C4), gates are 0/10 V. Real instruments and voices (saxophone, vocals…) can’t be synthesized convincingly: use a sampler (ask the user to drop a recording on it, then play it from a sequencer or MIDI→CV) or audioin (the user’s microphone or line input)."
+      "description": "List the module types you can add, with their inputs, outputs and settings (name, min, max, default, unit). Pass a type to get just that one. Audio and control signals are voltages: pitch is 1 V per octave (0 V = C4), gates are 0/10 V. Drums can be synthesized with modules, the modular way (kick: a sine VCO whose pitch drops fast, through a VCA with a short envelope; snare: noise through a band-pass VCF with a brief envelope; hi-hat: noise high-passed, very short — see the \"Noise percussion\" preset), or played by samplers from the built-in kit (list_sounds, set_sample) for a quick result; both are triggered by a Trigger Seq. Choose from what the user asks for. Real instruments and voices (saxophone, vocals…) can’t be synthesized convincingly: use a sampler with a recording the user drops on it (or one of their saved sounds), or audioin (the user’s microphone or line input)."
     },
     {
       "name": "list_presets",
@@ -51,7 +51,7 @@
     },
     {
       "name": "add_module",
-      "description": "Add a module to the rack. Optional row and x (in HP) place it; otherwise it goes to the first free spot. Optional params set its knobs. Returns its id. For a real instrument or a voice, add a sampler and ask the user to drop a recording on it, or audioin for a microphone."
+      "description": "Add a module to the rack. Optional row and x (in HP) place it; otherwise it goes to the first free spot. Optional params set its knobs. Returns its id. Drums: synthesize them with modules (VCO, Noise, VCF, ADSR, VCA) or load the built-in kit into samplers with set_sample. For a real instrument or a voice, a sampler with the user’s recording, or audioin for a microphone."
     },
     {
       "name": "remove_module",
@@ -96,6 +96,14 @@
     {
       "name": "highlight",
       "description": "Show the user a module, a knob or a jack by making it glow in the rack for a few seconds (the rack scrolls to it). target: \"moduleId\", \"moduleId:setting\" or \"moduleId:port\". With \"to\" (an input \"moduleId:port\") and an output as target, it draws the cable to plug as a dotted line. Use it when you explain or ask the user to turn or patch something."
+    },
+    {
+      "name": "list_sounds",
+      "description": "List the sounds a sampler can play: the built-in starter kit (kick, snare, hi-hat, a chord, a pad — always available, made by the synth itself) and the user’s own sounds saved in this browser. Load one with set_sample."
+    },
+    {
+      "name": "set_sample",
+      "description": "Load a sound (an id from list_sounds) into a sampler module. Then trigger it with its gate input (from a Trigger Seq, a Note Grid or MIDI→CV) and choose how it plays with set_param \"mode\": 0 one-shot (drums), 1 hold (plays while the gate is high), 2 loop (synced to the clock)."
     },
     {
       "name": "set_transport",

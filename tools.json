@@ -277,7 +277,7 @@
   {
     "name": "play_notes",
     "title": "Play notes",
-    "description": "Play notes live, as if on the keyboard (the patch must have a MIDI→CV module wired to sound). Each note: MIDI pitch (60 = C4), start and duration in seconds from now, optional velocity. Up to 64 notes within 30 seconds.",
+    "description": "Play notes live, as if on the keyboard (the patch must have a MIDI→CV module wired to sound, its KEYBOARD screen set to All or Computer). Each note: MIDI pitch (60 = C4), start and duration in seconds from now, optional velocity. Up to 64 notes within 30 seconds.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",

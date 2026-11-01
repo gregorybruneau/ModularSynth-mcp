@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "modularsynth",
   "display_name": "ModularSynth",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Build and play patches in ModularSynth, the free modular synthesizer in your browser.",
   "long_description": "Lets Claude add modules, patch cables, turn knobs, write sequences and play notes in the ModularSynth tab open in your browser. Open https://modularsynth.app, click “AI” in the top bar and check “Connect this tab to the server”. Everything stays on your computer: the extension only talks to that tab over 127.0.0.1.",
   "author": {
@@ -75,7 +75,7 @@
     },
     {
       "name": "play_notes",
-      "description": "Play notes live, as if on the keyboard (the patch must have a MIDI→CV module wired to sound). Each note: MIDI pitch (60 = C4), start and duration in seconds from now, optional velocity. Up to 64 notes within 30 seconds."
+      "description": "Play notes live, as if on the keyboard (the patch must have a MIDI→CV module wired to sound, its KEYBOARD screen set to All or Computer). Each note: MIDI pitch (60 = C4), start and duration in seconds from now, optional velocity. Up to 64 notes within 30 seconds."
     },
     {
       "name": "save_scene",

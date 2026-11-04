@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "modularsynth",
   "display_name": "ModularSynth",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Build and play patches in ModularSynth, the free modular synthesizer in your browser.",
   "long_description": "Lets Claude add modules, patch cables, turn knobs, write sequences and play notes in the ModularSynth tab open in your browser. Open https://modularsynth.app, click “AI” in the top bar and check “Connect this tab to the server”. Everything stays on your computer: the extension only talks to that tab over 127.0.0.1.",
   "author": {
@@ -31,7 +31,7 @@
   "tools": [
     {
       "name": "describe_patch",
-      "description": "Describe the current patch in the ModularSynth rack: modules (id, type, settings), cables (\"moduleId:port\" → \"moduleId:port\"), polyphony and whether the clock is running. Call it first."
+      "description": "Describe the current patch in the ModularSynth rack: modules (id, type, settings, \"bypass\": true when bypassed), cables (\"moduleId:port\" → \"moduleId:port\"), polyphony and whether the clock is running. Call it first."
     },
     {
       "name": "list_module_types",
@@ -68,6 +68,10 @@
     {
       "name": "set_param",
       "description": "Turn a knob or flip a switch on a module. The value is clamped to the setting range; the value actually set is returned."
+    },
+    {
+      "name": "set_bypass",
+      "description": "Bypass a module (on: true) or turn it back on (on: false), without unplugging anything: effects and processors (filters, VCA, mixers, delay, reverb…) pass their input straight through; sources and modulators (oscillators, LFO, envelopes, sequencers, clock…) go silent. Output, Scope and Memo can’t be bypassed. Useful to hear a part of a rich patch more clearly; the user can undo it."
     },
     {
       "name": "set_notes",

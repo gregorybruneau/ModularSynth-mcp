@@ -18,7 +18,7 @@ Then open https://modularsynth.app, click **AI** in the top bar and check **Conn
 
 The server speaks MCP over stdio to your AI, and listens on `ws://127.0.0.1:27900` for the ModularSynth tab (set `MODULARSYNTH_PORT` to change the port). Only the ModularSynth site (and local development) may connect. Nothing leaves your computer. Every change the AI makes can be undone with Ctrl+Z in the tab.
 
-Tools: `describe_patch`, `list_module_types`, `list_presets`, `load_preset`, `new_patch`, `add_module`, `remove_module`, `connect`, `disconnect`, `set_param`, `set_notes`, `play_notes`, `save_scene`, `recall_scene`, `set_song`, `play_song`, `highlight`, `set_transport`, `undo`.
+Tools: `describe_patch`, `list_module_types`, `list_presets`, `load_preset`, `new_patch`, `add_module`, `remove_module`, `connect`, `disconnect`, `set_param`, `set_bypass`, `set_notes`, `play_notes`, `save_scene`, `recall_scene`, `set_song`, `play_song`, `highlight`, `set_transport`, `undo`.
 
 ---
 

@@ -2,7 +2,7 @@
   {
     "name": "describe_patch",
     "title": "Describe patch",
-    "description": "Describe the current patch in the ModularSynth rack: modules (id, type, settings), cables (\"moduleId:port\" → \"moduleId:port\"), polyphony and whether the clock is running. Call it first.",
+    "description": "Describe the current patch in the ModularSynth rack: modules (id, type, settings, \"bypass\": true when bypassed), cables (\"moduleId:port\" → \"moduleId:port\"), polyphony and whether the clock is running. Call it first.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -203,6 +203,30 @@
         "id",
         "param",
         "value"
+      ],
+      "additionalProperties": false
+    },
+    "readOnly": false,
+    "destructive": false
+  },
+  {
+    "name": "set_bypass",
+    "title": "Set bypass",
+    "description": "Bypass a module (on: true) or turn it back on (on: false), without unplugging anything: effects and processors (filters, VCA, mixers, delay, reverb…) pass their input straight through; sources and modulators (oscillators, LFO, envelopes, sequencers, clock…) go silent. Output, Scope and Memo can’t be bypassed. Useful to hear a part of a rich patch more clearly; the user can undo it.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "on": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "on"
       ],
       "additionalProperties": false
     },

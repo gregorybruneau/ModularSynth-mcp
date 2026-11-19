@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "modularsynth",
   "display_name": "ModularSynth",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Build and play patches in ModularSynth, the free modular synthesizer in your browser.",
   "long_description": "Lets Claude add modules, patch cables, turn knobs, write sequences and play notes in the ModularSynth tab open in your browser. Open https://modularsynth.app, click “AI” in the top bar and check “Connect this tab to the server”. Everything stays on your computer: the extension only talks to that tab over 127.0.0.1.",
   "author": {
@@ -128,10 +128,6 @@
     {
       "name": "player_state",
       "description": "State for the ModularSynth player card: patch name, clock, audio, current scene, output level and the chosen knobs (or useful defaults)."
-    },
-    {
-      "name": "player_look",
-      "description": "Rack photo for the ModularSynth player card."
     },
     {
       "name": "player_set",

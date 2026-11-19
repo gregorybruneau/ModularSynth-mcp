@@ -751,24 +751,6 @@
     }
   },
   {
-    "name": "player_look",
-    "title": "Player look",
-    "description": "Rack photo for the ModularSynth player card.",
-    "inputSchema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "properties": {},
-      "additionalProperties": false
-    },
-    "readOnly": true,
-    "destructive": false,
-    "ui": {
-      "visibility": [
-        "app"
-      ]
-    }
-  },
-  {
     "name": "player_set",
     "title": "Player set",
     "description": "Player card gestures: start or stop the clock (\"transport\"), or turn one knob (\"knob\": \"moduleId:setting\", \"value\").",

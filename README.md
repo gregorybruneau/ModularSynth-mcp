@@ -33,7 +33,7 @@ In apps that support MCP Apps (Claude Desktop, for example), the AI can put a sm
 
 The card shows the patch name, a **▶ / ■** button for the clock, the current scene, the output level and up to **six knobs** the AI picked as the ones that matter most for this sound (or sensible defaults). Turn them and you hear the change at once.
 
-The sound still comes from the ModularSynth tab, which must stay open and connected. Everything you do on the card is a normal move in the tab (Ctrl+Z undoes it), and the AI sees it like any other change. The card's own tools (`player_state`, `player_look`, `player_set`) are reserved for the card: other clients don't get them.
+The sound still comes from the ModularSynth tab, which must stay open and connected. Everything you do on the card is a normal move in the tab (Ctrl+Z undoes it), and the AI sees it like any other change. The card's own tools (`player_state`, `player_set`) are reserved for the card: other clients don't get them.
 
 ## Troubleshooting
 

@@ -1,6 +1,6 @@
 {
   "name": "modularsynth-mcp",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "MCP server that lets your AI (Claude Desktop, Claude Code…) build and play patches in ModularSynth, the free modular synthesizer in your browser.",
   "type": "module",
   "bin": {

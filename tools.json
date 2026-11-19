@@ -2,7 +2,7 @@
   {
     "name": "describe_patch",
     "title": "Describe patch",
-    "description": "Describe the current patch in the ModularSynth rack: modules (id, type, settings, \"bypass\": true when bypassed), cables (\"moduleId:port\" → \"moduleId:port\"), polyphony and whether the clock is running. Call it first.",
+    "description": "Describe the current patch in the ModularSynth rack: modules (id, type, settings, \"bypass\": true when bypassed), cables (\"moduleId:port\" → \"moduleId:port\"), polyphony, whether the clock is running, and \"editing\": the Note Grid the user has open in its editor right now (write there when they talk about \"the notes\"). Call it first.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -15,7 +15,7 @@
   {
     "name": "list_module_types",
     "title": "List module types",
-    "description": "List the module types you can add, with their inputs, outputs and settings (name, min, max, default, unit). Pass a type to get just that one. Audio and control signals are voltages: pitch is 1 V per octave (0 V = C4), gates are 0/10 V. Drums can be synthesized with modules, the modular way (kick: a sine VCO whose pitch drops fast, through a VCA with a short envelope; snare: noise through a band-pass VCF with a brief envelope; hi-hat: noise high-passed, very short — see the \"Noise percussion\" preset), or played by samplers from the built-in kit (list_sounds, set_sample) for a quick result; both are triggered by a Trigger Seq. Choose from what the user asks for. Real instruments and voices (saxophone, vocals…) can’t be synthesized convincingly: use a sampler with a recording the user drops on it (or one of their saved sounds), or audioin (the user’s microphone or line input).",
+    "description": "List the module types you can add, with their inputs, outputs and settings (name, label shown on the panel, min, max, default, unit; \"options\": the meaning of each value of a selector, from min upward). Pass a type to get just that one. Audio and control signals are voltages: pitch is 1 V per octave (0 V = C4), gates are 0/10 V. Drums can be synthesized with modules, the modular way (kick: a sine VCO whose pitch drops fast, through a VCA with a short envelope; snare: noise through a band-pass VCF with a brief envelope; hi-hat: noise high-passed, very short — see the \"Noise percussion\" preset), or played by samplers from the built-in kit (list_sounds, set_sample) for a quick result; both are triggered by a Trigger Seq. Choose from what the user asks for. Real instruments and voices (saxophone, vocals…) can’t be synthesized convincingly: use a sampler with a recording the user drops on it (or one of their saved sounds), or audioin (the user’s microphone or line input).",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -158,7 +158,7 @@
       "additionalProperties": false
     },
     "readOnly": false,
-    "destructive": false
+    "destructive": true
   },
   {
     "name": "disconnect",
@@ -203,6 +203,46 @@
         "id",
         "param",
         "value"
+      ],
+      "additionalProperties": false
+    },
+    "readOnly": false,
+    "destructive": false
+  },
+  {
+    "name": "nudge_param",
+    "title": "Nudge param",
+    "description": "Turn a knob up or down by a little, some (default) or a lot, along the knob's own travel (logarithmic for frequencies and times), never past its range — for relative requests: \"brighter\" (filter cutoff up), \"darker\", \"faster\" (clock bpm up), \"more reverb\" (mix up). The old and new values are returned.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "param": {
+          "type": "string"
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "up",
+            "down"
+          ]
+        },
+        "amount": {
+          "type": "string",
+          "enum": [
+            "little",
+            "some",
+            "lot"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "param",
+        "direction"
       ],
       "additionalProperties": false
     },
@@ -292,6 +332,167 @@
       "required": [
         "id",
         "notes"
+      ],
+      "additionalProperties": false
+    },
+    "readOnly": false,
+    "destructive": true
+  },
+  {
+    "name": "set_steps",
+    "title": "Set steps",
+    "description": "Write the steps of a sequencer in one call. Trigger Seq: \"tracks\", each a track (1–4) and a pattern of up to 16 characters, \"x\" a hit and \".\" a rest (e.g. \"x...x...x...x...\" four on the floor), on page A–D (default: the page the module shows); the other tracks are kept, and written tracks leave Euclidean mode. Step Seq: \"notes\", up to 16 MIDI pitches (60 = C4) or null for a silent step; the length follows, and each pitch is fitted to the module's scale and octave range (from C4 up), so the notes actually set are returned. For a Note Grid, use set_notes.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "page": {
+          "type": "string",
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ]
+        },
+        "tracks": {
+          "minItems": 1,
+          "maxItems": 4,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "track": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4
+              },
+              "pattern": {
+                "type": "string",
+                "pattern": "^[xX.-]{1,16}$"
+              }
+            },
+            "required": [
+              "track",
+              "pattern"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "notes": {
+          "minItems": 1,
+          "maxItems": 16,
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 127
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "readOnly": false,
+    "destructive": true
+  },
+  {
+    "name": "set_voices",
+    "title": "Set voices",
+    "description": "Set the polyphony of the patch: how many notes can sound at once (1–16). Chords from a keyboard or a Note Grid need as many voices as notes; a mono bass or lead sounds best with 1.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "voices": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        }
+      },
+      "required": [
+        "voices"
+      ],
+      "additionalProperties": false
+    },
+    "readOnly": false,
+    "destructive": false
+  },
+  {
+    "name": "transform_notes",
+    "title": "Transform notes",
+    "description": "Transform one page (A–D, default: the page the module shows) of a Note Grid: \"harmonize\" adds the third (voices \"third\", default) or the third and fifth (\"third+fifth\") of the scale above each note; \"humanize\" varies velocities (and start times by one step at 1/32 resolution) by \"amount\" (0–1, default 0.5); \"vary\" copies the page to page \"to\" (default the next page) and moves about amount×30 % of the notes to a neighbouring scale note — a quick variation for a chorus or a break. Scale: \"scale\" and \"root\" (0 = C … 11 = B; scale indexes as in list_module_types for the Quant module), otherwise guessed from the notes.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "harmonize",
+            "humanize",
+            "vary"
+          ]
+        },
+        "page": {
+          "type": "string",
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ]
+        },
+        "to": {
+          "type": "string",
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ]
+        },
+        "voices": {
+          "type": "string",
+          "enum": [
+            "third",
+            "third+fifth"
+          ]
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "scale": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "root": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 11
+        }
+      },
+      "required": [
+        "id",
+        "action"
       ],
       "additionalProperties": false
     },
@@ -394,7 +595,7 @@
       "additionalProperties": false
     },
     "readOnly": false,
-    "destructive": false
+    "destructive": true
   },
   {
     "name": "set_song",
@@ -456,6 +657,144 @@
     },
     "readOnly": false,
     "destructive": false
+  },
+  {
+    "name": "listen",
+    "title": "Listen",
+    "description": "Listen to the patch for a few seconds (default 2, up to 10) and report what actually sounds: for each Output module, its peak level in dBFS and whether the master limiter is squeezing it (too loud: lower a level or the Output gain); the peak voltage of every module output; and which modules are silent. Use it after building or changing a patch, with the clock running for sequenced parts, to check that it makes sound and is not too loud. Needs audio on.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "seconds": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 10
+        }
+      },
+      "additionalProperties": false
+    },
+    "readOnly": true,
+    "destructive": false
+  },
+  {
+    "name": "look",
+    "title": "Look",
+    "description": "See the synth: with no argument, a photo of the whole rack (modules, knob positions, cables); with \"module\", that module's panel plus an oscilloscope and spectrum of one of its outputs (\"port\", default the first output); with \"output\": true, the oscilloscope and spectrum of what reaches the Output. Use it to check a patch visually: a clipped or silent waveform, a filter closed too far, a bass that fills the spectrum. Scope and spectrum need audio on.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "module": {
+          "type": "string"
+        },
+        "port": {
+          "type": "string"
+        },
+        "output": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "readOnly": true,
+    "destructive": false
+  },
+  {
+    "name": "show_player",
+    "title": "Show player",
+    "description": "Show the ModularSynth player in the conversation (in apps that support MCP Apps): the patch name, play/stop and up to 6 knobs you choose (\"moduleId:setting\", the ones that matter most for this sound), so the user can play with them without leaving the chat. Call it when you have finished a patch. The sound still comes from the ModularSynth tab.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "knobs": {
+          "maxItems": 6,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "readOnly": true,
+    "destructive": false,
+    "ui": {
+      "resourceUri": "ui://modularsynth/player"
+    }
+  },
+  {
+    "name": "player_state",
+    "title": "Player state",
+    "description": "State for the ModularSynth player card: patch name, clock, audio, current scene, output level and the chosen knobs (or useful defaults).",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "knobs": {
+          "maxItems": 6,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "readOnly": true,
+    "destructive": false,
+    "ui": {
+      "visibility": [
+        "app"
+      ]
+    }
+  },
+  {
+    "name": "player_look",
+    "title": "Player look",
+    "description": "Rack photo for the ModularSynth player card.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "readOnly": true,
+    "destructive": false,
+    "ui": {
+      "visibility": [
+        "app"
+      ]
+    }
+  },
+  {
+    "name": "player_set",
+    "title": "Player set",
+    "description": "Player card gestures: start or stop the clock (\"transport\"), or turn one knob (\"knob\": \"moduleId:setting\", \"value\").",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "transport": {
+          "type": "boolean"
+        },
+        "knob": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "readOnly": false,
+    "destructive": false,
+    "ui": {
+      "visibility": [
+        "app"
+      ]
+    }
   },
   {
     "name": "highlight",
@@ -520,7 +859,7 @@
       "additionalProperties": false
     },
     "readOnly": false,
-    "destructive": false
+    "destructive": true
   },
   {
     "name": "set_transport",
@@ -540,6 +879,19 @@
       "additionalProperties": false
     },
     "readOnly": false,
+    "destructive": false
+  },
+  {
+    "name": "what_changed",
+    "title": "What changed",
+    "description": "What the user (and other assistants) changed in the patch since your last action: knobs turned, cables patched, modules added, scenes recalled, the clock started. Every tool answer already ends with this when something changed; call this to look again, for example when the user says \"your turn\" after playing — then answer what they did, like a musician would.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "readOnly": true,
     "destructive": false
   },
   {

@@ -1,0 +1,62 @@
+[
+  {
+    "name": "techno_loop",
+    "title": "Techno loop",
+    "description": "Build a driving techno loop: kick, hi-hats, an acid bass, and start it.",
+    "arguments": [
+      {
+        "name": "tempo",
+        "description": "Tempo in BPM",
+        "default": "128"
+      }
+    ],
+    "template": "Build a techno loop in ModularSynth at {{tempo}} BPM: a kick on every beat, off-beat hi-hats, and a squelchy acid bass on a step sequencer through a resonant filter. Start the clock, then check it with listen and look, and fix the levels if needed."
+  },
+  {
+    "name": "ambient_pad",
+    "title": "Ambient pad",
+    "description": "A slow, evolving pad that plays by itself, with a long reverb.",
+    "arguments": [
+      {
+        "name": "key",
+        "description": "Musical key, e.g. \"D minor\"",
+        "default": "D minor"
+      }
+    ],
+    "template": "Make a slow, evolving ambient pad in {{key}} in ModularSynth that plays by itself: slow LFOs on the filter and the volume, a chorus and a long reverb. Check that it sounds with listen, then tell me what to play with."
+  },
+  {
+    "name": "explain_patch",
+    "title": "Explain this patch",
+    "description": "Explain the current patch, signal by signal, for a beginner.",
+    "arguments": [],
+    "template": "Explain the current ModularSynth patch to me as to a beginner: describe_patch and look at the rack, then follow the signal from the sources to the Output, say what each module does to the sound, and suggest one knob to turn to hear each idea. Use highlight to show me where."
+  },
+  {
+    "name": "teach_subtractive",
+    "title": "Teach me subtractive synthesis",
+    "description": "A hands-on lesson: oscillator, filter, envelope, step by step.",
+    "arguments": [],
+    "template": "Teach me subtractive synthesis in ModularSynth, step by step: start from a new patch, add one module at a time (oscillator, filter, amplifier, envelope), and after each step tell me what to listen for and which knob to turn. Wait for me before the next step."
+  },
+  {
+    "name": "remix_preset",
+    "title": "Remix a preset",
+    "description": "Load a preset and give it a new character.",
+    "arguments": [
+      {
+        "name": "preset",
+        "description": "Preset name (see list_presets)",
+        "required": true
+      }
+    ],
+    "template": "Load the ModularSynth preset \"{{preset}}\", listen to it, then remix it: keep its idea but change its character (sounds, rhythm, effects). Tell me what you changed and why, and check it with listen and look."
+  },
+  {
+    "name": "jam_with_me",
+    "title": "Jam with me",
+    "description": "Play together: you change something, the AI answers musically.",
+    "arguments": [],
+    "template": "Let's jam in ModularSynth. Look at the current patch and start the clock if there is one. From now on, whenever I say \"your turn\", call what_changed, then answer what I did with one musical change of your own (a new rhythm, a filter move, a variation with transform_notes…), and tell me in one sentence what you did."
+  }
+]

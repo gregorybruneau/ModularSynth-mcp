@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "modularsynth",
   "display_name": "ModularSynth",
-  "version": "1.4.0",
+  "version": "1.6.0",
   "description": "Build and play patches in ModularSynth, the free modular synthesizer in your browser.",
   "long_description": "Lets Claude add modules, patch cables, turn knobs, write sequences and play notes in the ModularSynth tab open in your browser. Open https://modularsynth.app, click “AI” in the top bar and check “Connect this tab to the server”. Everything stays on your computer: the extension only talks to that tab over 127.0.0.1.",
   "author": {
@@ -31,11 +31,11 @@
   "tools": [
     {
       "name": "describe_patch",
-      "description": "Describe the current patch in the ModularSynth rack: modules (id, type, settings, \"bypass\": true when bypassed), cables (\"moduleId:port\" → \"moduleId:port\"), polyphony and whether the clock is running. Call it first."
+      "description": "Describe the current patch in the ModularSynth rack: modules (id, type, settings, \"bypass\": true when bypassed), cables (\"moduleId:port\" → \"moduleId:port\"), polyphony, whether the clock is running, and \"editing\": the Note Grid the user has open in its editor right now (write there when they talk about \"the notes\"). Call it first."
     },
     {
       "name": "list_module_types",
-      "description": "List the module types you can add, with their inputs, outputs and settings (name, min, max, default, unit). Pass a type to get just that one. Audio and control signals are voltages: pitch is 1 V per octave (0 V = C4), gates are 0/10 V. Drums can be synthesized with modules, the modular way (kick: a sine VCO whose pitch drops fast, through a VCA with a short envelope; snare: noise through a band-pass VCF with a brief envelope; hi-hat: noise high-passed, very short — see the \"Noise percussion\" preset), or played by samplers from the built-in kit (list_sounds, set_sample) for a quick result; both are triggered by a Trigger Seq. Choose from what the user asks for. Real instruments and voices (saxophone, vocals…) can’t be synthesized convincingly: use a sampler with a recording the user drops on it (or one of their saved sounds), or audioin (the user’s microphone or line input)."
+      "description": "List the module types you can add, with their inputs, outputs and settings (name, label shown on the panel, min, max, default, unit; \"options\": the meaning of each value of a selector, from min upward). Pass a type to get just that one. Audio and control signals are voltages: pitch is 1 V per octave (0 V = C4), gates are 0/10 V. Drums can be synthesized with modules, the modular way (kick: a sine VCO whose pitch drops fast, through a VCA with a short envelope; snare: noise through a band-pass VCF with a brief envelope; hi-hat: noise high-passed, very short — see the \"Noise percussion\" preset), or played by samplers from the built-in kit (list_sounds, set_sample) for a quick result; both are triggered by a Trigger Seq. Choose from what the user asks for. Real instruments and voices (saxophone, vocals…) can’t be synthesized convincingly: use a sampler with a recording the user drops on it (or one of their saved sounds), or audioin (the user’s microphone or line input)."
     },
     {
       "name": "list_presets",
@@ -70,12 +70,28 @@
       "description": "Turn a knob or flip a switch on a module. The value is clamped to the setting range; the value actually set is returned."
     },
     {
+      "name": "nudge_param",
+      "description": "Turn a knob up or down by a little, some (default) or a lot, along the knob's own travel (logarithmic for frequencies and times), never past its range — for relative requests: \"brighter\" (filter cutoff up), \"darker\", \"faster\" (clock bpm up), \"more reverb\" (mix up). The old and new values are returned."
+    },
+    {
       "name": "set_bypass",
       "description": "Bypass a module (on: true) or turn it back on (on: false), without unplugging anything: effects and processors (filters, VCA, mixers, delay, reverb…) pass their input straight through; sources and modulators (oscillators, LFO, envelopes, sequencers, clock…) go silent. Output, Scope and Memo can’t be bypassed. Useful to hear a part of a rich patch more clearly; the user can undo it."
     },
     {
       "name": "set_notes",
       "description": "Write the notes of one page (A–D, default A) of a Note Grid sequencer; the other pages are kept. Each note: start step (0–63: sixteenth notes when clocked by Clock ×4, thirty-second notes when the Note Grid \"resolution\" setting is 1), length in steps, MIDI pitch (60 = C4), optional velocity. Replaces the notes of that page. Only the page selected by the \"page\" setting plays: put a verse on A and a chorus on B, then save scenes with different \"page\" values."
+    },
+    {
+      "name": "set_steps",
+      "description": "Write the steps of a sequencer in one call. Trigger Seq: \"tracks\", each a track (1–4) and a pattern of up to 16 characters, \"x\" a hit and \".\" a rest (e.g. \"x...x...x...x...\" four on the floor), on page A–D (default: the page the module shows); the other tracks are kept, and written tracks leave Euclidean mode. Step Seq: \"notes\", up to 16 MIDI pitches (60 = C4) or null for a silent step; the length follows, and each pitch is fitted to the module's scale and octave range (from C4 up), so the notes actually set are returned. For a Note Grid, use set_notes."
+    },
+    {
+      "name": "set_voices",
+      "description": "Set the polyphony of the patch: how many notes can sound at once (1–16). Chords from a keyboard or a Note Grid need as many voices as notes; a mono bass or lead sounds best with 1."
+    },
+    {
+      "name": "transform_notes",
+      "description": "Transform one page (A–D, default: the page the module shows) of a Note Grid: \"harmonize\" adds the third (voices \"third\", default) or the third and fifth (\"third+fifth\") of the scale above each note; \"humanize\" varies velocities (and start times by one step at 1/32 resolution) by \"amount\" (0–1, default 0.5); \"vary\" copies the page to page \"to\" (default the next page) and moves about amount×30 % of the notes to a neighbouring scale note — a quick variation for a chorus or a break. Scale: \"scale\" and \"root\" (0 = C … 11 = B; scale indexes as in list_module_types for the Quant module), otherwise guessed from the notes."
     },
     {
       "name": "play_notes",
@@ -98,6 +114,30 @@
       "description": "Play the song from its first line (or from line \"from\", counted from 0): the scene of each line plays for its bars, clocks restart on the first beat. Stop it with set_transport running: false."
     },
     {
+      "name": "listen",
+      "description": "Listen to the patch for a few seconds (default 2, up to 10) and report what actually sounds: for each Output module, its peak level in dBFS and whether the master limiter is squeezing it (too loud: lower a level or the Output gain); the peak voltage of every module output; and which modules are silent. Use it after building or changing a patch, with the clock running for sequenced parts, to check that it makes sound and is not too loud. Needs audio on."
+    },
+    {
+      "name": "look",
+      "description": "See the synth: with no argument, a photo of the whole rack (modules, knob positions, cables); with \"module\", that module's panel plus an oscilloscope and spectrum of one of its outputs (\"port\", default the first output); with \"output\": true, the oscilloscope and spectrum of what reaches the Output. Use it to check a patch visually: a clipped or silent waveform, a filter closed too far, a bass that fills the spectrum. Scope and spectrum need audio on."
+    },
+    {
+      "name": "show_player",
+      "description": "Show the ModularSynth player in the conversation (in apps that support MCP Apps): the patch name, play/stop and up to 6 knobs you choose (\"moduleId:setting\", the ones that matter most for this sound), so the user can play with them without leaving the chat. Call it when you have finished a patch. The sound still comes from the ModularSynth tab."
+    },
+    {
+      "name": "player_state",
+      "description": "State for the ModularSynth player card: patch name, clock, audio, current scene, output level and the chosen knobs (or useful defaults)."
+    },
+    {
+      "name": "player_look",
+      "description": "Rack photo for the ModularSynth player card."
+    },
+    {
+      "name": "player_set",
+      "description": "Player card gestures: start or stop the clock (\"transport\"), or turn one knob (\"knob\": \"moduleId:setting\", \"value\")."
+    },
+    {
       "name": "highlight",
       "description": "Show the user a module, a knob or a jack by making it glow in the rack for a few seconds (the rack scrolls to it). target: \"moduleId\", \"moduleId:setting\" or \"moduleId:port\". With \"to\" (an input \"moduleId:port\") and an output as target, it draws the cable to plug as a dotted line. Use it when you explain or ask the user to turn or patch something."
     },
@@ -112,6 +152,10 @@
     {
       "name": "set_transport",
       "description": "Start or stop every Clock in the patch (the ▶/■ button): sequencers play while it runs. Stopping also stops a playing song."
+    },
+    {
+      "name": "what_changed",
+      "description": "What the user (and other assistants) changed in the patch since your last action: knobs turned, cables patched, modules added, scenes recalled, the clock started. Every tool answer already ends with this when something changed; call this to look again, for example when the user says \"your turn\" after playing — then answer what they did, like a musician would."
     },
     {
       "name": "undo",

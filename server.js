@@ -4,18 +4,35 @@
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { Server } from '@modelcontextprotocol/server';
+import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { WebSocket, WebSocketServer } from 'ws';
 
 export const DEFAULT_PORT = 27900;
 const VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version;
 /** Les outils du site (nom, description, schéma), générés depuis son code : `npm run mcp:tools`. */
 const TOOLS = JSON.parse(readFileSync(new URL('./tools.json', import.meta.url), 'utf8'));
+/** Prompts (gabarits `{{argument}}`) et instructions du site, servis tant qu'aucun onglet n'est connecté. */
+const PROMPTS = JSON.parse(readFileSync(new URL('./prompts.json', import.meta.url), 'utf8'));
+const INSTRUCTIONS = readFileSync(new URL('./instructions.txt', import.meta.url), 'utf8');
+/** La carte ModularSynth (MCP Apps) : un fichier HTML autonome, construit depuis le site. */
+const PLAYER_URI = 'ui://modularsynth/player';
+const PLAYER = readFileSync(new URL('./app/player.html', import.meta.url), 'utf8');
+const PLAYER_RESOURCE = { uri: PLAYER_URI, name: 'ModularSynth player', mimeType: 'text/html;profile=mcp-app', description: 'Play/stop and a few knobs of the ModularSynth tab, in the conversation.' };
+
+/** Le texte d'un prompt de prompts.json, arguments remplacés (valeur par défaut si absente). */
+export function renderLocalPrompt(name, args = {}) {
+  const p = PROMPTS.find((x) => x.name === name);
+  if (!p) throw new Error(`Unknown prompt "${name}".`);
+  const missing = p.arguments.find((a) => a.required && !args[a.name] && a.default === undefined);
+  if (missing) throw new Error(`The prompt "${name}" needs the argument "${missing.name}" (${missing.description}).`);
+  return p.template.replace(/\{\{(\w+)\}\}/g, (_, k) => args[k] ?? p.arguments.find((a) => a.name === k)?.default ?? '');
+}
 const CALL_TIMEOUT_MS = 15_000;
-/** Un patch décrit tient largement dans 1 Mo. */
-const MAX_MESSAGE_BYTES = 1024 * 1024;
+/** Listes de prompts et de ressources : une instance d'avant 1.6.0 n'y répond jamais, on n'attend pas 15 s. */
+const LIST_TIMEOUT_MS = 2000;
+/** Un patch décrit tient dans 1 Mo ; les images de `look` (base64) demandent plus. */
+const MAX_MESSAGE_BYTES = 4 * 1024 * 1024;
 /** Port occupé : on réessaie (Claude Desktop lance l'extension deux fois de suite au démarrage). */
 const LISTEN_RETRY_MS = 1000;
 /**
@@ -27,17 +44,27 @@ const RELAY_HEADER = 'x-modularsynth-relay';
 const NOT_CONNECTED = 'ModularSynth is not connected. Ask the user to open https://modularsynth.app, click "AI" in the top bar, and check "Connect this tab to the server".';
 
 /**
- * Le site, ses prévisualisations Cloudflare (sur le compte du projet seulement : n'importe qui peut
- * nommer un Worker « modularsynth » sur son propre compte), le développement local : rien d'autre.
+ * Le site et ses prévisualisations Cloudflare (sur le compte du projet seulement : n'importe qui peut
+ * nommer un Worker « modularsynth » sur son propre compte). Le développement local (localhost) seulement
+ * avec MODULARSYNTH_DEV=1 : sinon n'importe quel projet local ouvert dans le navigateur pourrait se faire
+ * passer pour l'onglet et répondre à l'IA.
  */
-export function allowedOrigin(origin) {
+export function allowedOrigin(origin, dev = process.env.MODULARSYNTH_DEV === '1') {
   if (typeof origin !== 'string') return false;
   return (
     /^https:\/\/(www\.)?modularsynth\.app$/.test(origin) ||
     /^https:\/\/([a-z0-9-]+-)?modularsynth\.gregory-bruneau\.workers\.dev$/.test(origin) ||
-    /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+    (dev && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))
   );
 }
+
+/** Réponse riche de la page (1.6.0) : du texte et des images en base64. */
+const richResult = (r) =>
+  r !== null && typeof r === 'object' && typeof r.text === 'string' && Array.isArray(r.images) && r.images.every((i) => i && typeof i.data === 'string' && /^image\/(png|jpeg)$/.test(i.mimeType));
+
+/** Liste d'outils envoyée par l'onglet : gardée seulement si elle a la bonne forme. */
+const validTools = (list) =>
+  Array.isArray(list) && list.length > 0 && list.every((t) => t && typeof t.name === 'string' && typeof t.description === 'string' && t.inputSchema && typeof t.inputSchema === 'object');
 
 const parse = (data) => {
   try {
@@ -54,6 +81,9 @@ const parse = (data) => {
  */
 export function createBridge({ port = Number(process.env.MODULARSYNTH_PORT) || DEFAULT_PORT } = {}) {
   let tab = null;
+  /** Outils de l'onglet connecté (ceux du site en ligne, plus récents que tools.json) ; null sans onglet. */
+  let tabTools = null;
+  const toolsChanged = new Set();
   let relay = null; // instance secondaire : la connexion vers celle qui tient le port
   let next = 1;
   let failure = null;
@@ -119,7 +149,7 @@ export function createBridge({ port = Number(process.env.MODULARSYNTH_PORT) || D
       pending.delete(msg.id);
       clearTimeout(p.timer);
       if (msg.error !== undefined) p.reject(new Error(String(msg.error)));
-      else if (typeof msg.result !== 'string') p.reject(new Error('ModularSynth sent an unexpected answer.'));
+      else if (typeof msg.result !== 'string' && !p.raw && !richResult(msg.result)) p.reject(new Error('ModularSynth sent an unexpected answer.'));
       else p.resolve(msg.result);
     });
     ws.on('close', () => {
@@ -137,12 +167,19 @@ export function createBridge({ port = Number(process.env.MODULARSYNTH_PORT) || D
       // Une autre instance : ses appels passent par notre onglet.
       ws.on('message', async (data) => {
         const msg = parse(data);
-        if (!msg || typeof msg.name !== 'string') return;
+        if (!msg || msg.id === undefined) return;
+        // L'autre instance demande la liste des outils : celle de notre onglet, à défaut la nôtre.
+        if (msg.method === 'list') return ws.send(JSON.stringify({ id: msg.id, result: tabTools ?? TOOLS }));
+        // Toute autre demande (appel d'outil, prompts, ressources…) part telle quelle vers l'onglet ;
+        // une instance d'avant 1.6.0 envoyait { name, args } sans méthode.
+        const { id, ...body } = msg;
         try {
+          const result = await request(body.method ? body : { method: 'call', ...body }, tab, true);
           ws.send(
             JSON.stringify({
-              id: msg.id,
-              result: await call(msg.name, msg.args),
+              id,
+              // Une instance d'avant 1.6.0 n'accepte que du texte : on lui garde le texte d'une réponse riche.
+              result: !body.method && richResult(result) ? result.text : result,
             }),
           );
         } catch (e) {
@@ -164,29 +201,82 @@ export function createBridge({ port = Number(process.env.MODULARSYNTH_PORT) || D
     }
     tab = ws;
     answers(ws, 'The ModularSynth tab was closed.');
+    // La page apprend notre version (elle prévient l'IA si nous sommes en retard), puis nous donne ses
+    // outils : ceux du site en ligne, même s'il est plus récent que ce serveur.
+    ws.send(JSON.stringify({ type: 'server', version: VERSION }));
+    request({ method: 'list' }, ws, true)
+      .then((list) => {
+        if (tab !== ws || !validTools(list)) return;
+        tabTools = list;
+        for (const f of toolsChanged) f();
+      })
+      .catch(() => {});
     ws.on('close', () => {
-      if (tab === ws) tab = null;
+      if (tab !== ws) return;
+      tab = null;
+      tabTools = null;
     });
   });
 
-  function call(name, args) {
-    const to = relay ?? tab;
+  /** Envoie une demande à `to` (l'onglet, ou l'instance qui le tient) ; `raw` : réponse autre que du texte. */
+  function request(body, to = relay ?? tab, raw = false, timeout = CALL_TIMEOUT_MS) {
     if (!to) return Promise.reject(new Error(failure ?? NOT_CONNECTED));
     const id = next++;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         pending.delete(id);
         reject(new Error('ModularSynth did not answer in time.'));
-      }, CALL_TIMEOUT_MS);
-      pending.set(id, { resolve, reject, timer, ws: to });
-      to.send(JSON.stringify({ id, method: 'call', name, args }));
+      }, timeout);
+      pending.set(id, { resolve, reject, timer, ws: to, raw });
+      to.send(JSON.stringify({ id, ...body }));
     });
+  }
+
+  const call = (name, args) => request({ method: 'call', name, args });
+
+  /** Prompts de l'onglet s'il est là (ou de l'instance qui le tient), sinon prompts.json. */
+  async function prompts() {
+    if (!relay && !tab) return PROMPTS;
+    // Une instance d'avant 1.6.0 ignore cette demande : repli rapide sur prompts.json.
+    const list = await request({ method: 'prompts' }, undefined, true, LIST_TIMEOUT_MS).catch(() => null);
+    return Array.isArray(list) ? list : PROMPTS;
+  }
+
+  async function prompt(name, args) {
+    if (!relay && !tab) return renderLocalPrompt(name, args);
+    return request({ method: 'prompt', name, args });
+  }
+
+  /** Les ressources viennent de la page : sans onglet, aucune. */
+  async function resources() {
+    if (!relay && !tab) return [];
+    const list = await request({ method: 'resources' }, undefined, true, LIST_TIMEOUT_MS).catch(() => null);
+    return Array.isArray(list) ? list : [];
+  }
+
+  const resource = (uri) => request({ method: 'resource', uri }, undefined, true);
+
+  /** Les outils à annoncer : ceux de l'onglet s'il est là (directement ou par l'autre instance), sinon tools.json. */
+  async function tools() {
+    if (relay) {
+      const list = await request({ method: 'list' }, relay, true).catch(() => null);
+      return validTools(list) ? list : TOOLS;
+    }
+    return tabTools ?? TOOLS;
   }
 
   return {
     ready,
     port: () => http.address()?.port ?? port,
     call,
+    request,
+    tools,
+    prompts,
+    prompt,
+    resources,
+    resource,
+    /** Prévenu quand l'onglet apporte sa liste d'outils. */
+    onToolsChanged: (f) => toolsChanged.add(f),
     close: () =>
       new Promise((resolve) => {
         closed = true;
@@ -200,22 +290,59 @@ export function createBridge({ port = Number(process.env.MODULARSYNTH_PORT) || D
   };
 }
 
-/** Le serveur MCP : la liste des outils est toujours là ; chaque appel part vers l'onglet. */
+/** Le serveur MCP : la liste des outils est toujours là (celle de l'onglet dès qu'il est connecté) ; chaque appel part vers l'onglet. */
 export function createMcpServer(bridge) {
-  const server = new Server({ name: 'modularsynth', version: VERSION }, { capabilities: { tools: {} } });
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: TOOLS.map((t) => ({
+  const server = new Server(
+    { name: 'modularsynth', version: VERSION },
+    { capabilities: { tools: { listChanged: true }, prompts: { listChanged: true }, resources: { listChanged: true } }, instructions: INSTRUCTIONS },
+  );
+  // Un onglet arrive : ses outils, prompts et ressources remplacent ceux embarqués.
+  bridge.onToolsChanged?.(() => {
+    void server.sendToolListChanged().catch(() => {});
+    void server.sendPromptListChanged().catch(() => {});
+    void server.sendResourceListChanged().catch(() => {});
+  });
+  server.setRequestHandler('prompts/list', async () => ({
+    prompts: (bridge.prompts ? await bridge.prompts() : PROMPTS).map((p) => ({
+      name: p.name,
+      title: p.title,
+      description: p.description,
+      arguments: p.arguments.map(({ name, description, required }) => ({ name, description, required: !!required })),
+    })),
+  }));
+  server.setRequestHandler('prompts/get', async (req) => {
+    const name = req.params.name;
+    const text = bridge.prompt ? await bridge.prompt(name, req.params.arguments ?? {}) : renderLocalPrompt(name, req.params.arguments);
+    const p = PROMPTS.find((x) => x.name === name);
+    return { ...(p && { description: p.description }), messages: [{ role: 'user', content: { type: 'text', text } }] };
+  });
+  server.setRequestHandler('resources/list', async () => ({ resources: [PLAYER_RESOURCE, ...(bridge.resources ? await bridge.resources() : [])] }));
+  server.setRequestHandler('resources/read', async (req) => ({
+    contents: [req.params.uri === PLAYER_URI ? { uri: PLAYER_URI, mimeType: PLAYER_RESOURCE.mimeType, text: PLAYER } : await bridge.resource(req.params.uri)],
+  }));
+  // Outils réservés à la carte : seulement pour un client qui affiche les cartes (MCP Apps). Un autre les
+  // donnerait au modèle, dont les gestes passeraient alors pour ceux de la personne : ni listés, ni appelables.
+  const visible = (t) => !t.ui?.visibility || t.ui.visibility.includes('model') || !!server.getClientCapabilities()?.extensions?.['io.modelcontextprotocol/ui'];
+  server.setRequestHandler('tools/list', async () => ({
+    tools: (bridge.tools ? await bridge.tools() : TOOLS)
+      .filter(visible)
+      .map((t) => ({
       name: t.name,
       description: t.description,
       inputSchema: t.inputSchema,
       title: t.title,
       annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: t.destructive, openWorldHint: false },
+      // MCP Apps : interface affichée par l'outil, ou outil réservé à l'interface.
+      ...(t.ui && { _meta: { ui: t.ui } }),
     })),
   }));
-  server.setRequestHandler(CallToolRequestSchema, async (req) => {
+  server.setRequestHandler('tools/call', async (req) => {
     try {
-      const text = await bridge.call(req.params.name, req.params.arguments ?? {});
-      return { content: [{ type: 'text', text }] };
+      const tool = TOOLS.find((t) => t.name === req.params.name);
+      if (tool && !visible(tool)) throw new Error(`Unknown tool "${req.params.name}".`);
+      const result = await bridge.call(req.params.name, req.params.arguments ?? {});
+      if (typeof result === 'string') return { content: [{ type: 'text', text: result }] };
+      return { content: [{ type: 'text', text: result.text }, ...result.images.map(({ data, mimeType }) => ({ type: 'image', data, mimeType }))] };
     } catch (e) {
       return {
         content: [{ type: 'text', text: e instanceof Error ? e.message : String(e) }],
